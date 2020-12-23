@@ -1,53 +1,45 @@
 import csv
+import json
 resd = open('resdata.csv', 'r')
-wrid = open('resgen.csv', 'w')
 rd = csv.reader(resd)
-fieldnames = ['no.', 'name', 'batch', 'fec', 'cgpa']
-wd = csv.DictWriter(wrid, fieldnames=fieldnames)
+
+db = {}
+db['fecs'] = {}
+
+grades = ['O', 'A+', 'A', 'B+', 'B', 'C', 'P']
 flag = False
+ind = 0
 
-tot = 0
-ograde = 0
-apgrade = 0
-agrade = 0
-bpgrade = 0
-bgrade = 0
-cgrade = 0
-othgrade = 0
+subjectPrefix = 'FEC'
 
-fecname = input("Enter the full FEC code : ")
-print(fecname + " : ")
+def findFecIndex(line):
+    for i in range(len(line)):
+        if line[i][:len(subjectPrefix)] == subjectPrefix:
+            return i, line[i], True
+    return -1, '', False
+
 for line in rd:
     if line[0] == "Sr.No":
-        if line[8] == fecname:
-            flag = True
-        else:
-            flag = False
+        ind, fecname, flag = findFecIndex(line)
     if line[0].isnumeric() and flag:
-        field = {'no.' : line[0],'name' : line[1], 'batch' : line[2], 'fec' : line[8], 'cgpa' : line[10]}
-        wd.writerow(field)
-        tot += 1
-        if line[8]=="O":
-            ograde += 1
-        elif line[8] =="A+":
-            apgrade+=1
-        elif line[8] == "A":
-            agrade += 1
-        elif line[8] == "B+":
-            bpgrade += 1
-        elif line[8] == "B":
-            bgrade += 1
-        elif line[8] == "C":
-            cgrade += 1
+        if not fecname in db['fecs']:
+            db['fecs'][fecname] = {
+                'O'  : 0,
+                'A+' : 0,
+                'A'  : 0,
+                'B+' : 0,
+                'B'  : 0,
+                'C'  : 0,
+                'P'  : 0,
+                'N'  : 0, 
+            }
+        if line[ind] in grades: 
+            db['fecs'][fecname][line[ind]] += 1
         else:
-            othgrade += 1
+            db['fecs'][fecname]['N'] += 1
 resd.close()
-wrid.close()
-print("O grade : " + str(ograde) + " -> " + str(round ((float(ograde) / tot * 100.0), 2)) + "%")
-print("A+ grade : " + str(apgrade) + " -> " + str(round ((float(apgrade) / tot * 100.0), 2)) + "%")
-print("A grade : " + str(agrade) + " -> " + str(round ((float(agrade) / tot * 100.0), 2)) + "%")
-print("B+ grade : " + str(bpgrade) + " -> " + str(round ((float(bpgrade) / tot * 100.0), 2)) + "%")
-print("B grade : " + str(bgrade) + " -> " + str(round ((float(bgrade) / tot * 100.0), 2)) + "%")
-print("C grade : " + str(cgrade) + " -> " + str(round ((float(cgrade) / tot * 100.0), 2)) + "%")
-print("F/P/I grades : " + str(othgrade) + " -> " + str(round ((float(othgrade) / tot * 100.0), 2)) + "%")
-print("Total : " + str(tot))
+
+db['fecs'] = {key: val for key, val in sorted(db['fecs'].items(), key = lambda ele: int(ele[0][len(subjectPrefix):]))} 
+
+with open('fecs2k19.json', 'w') as outfile:
+    json.dump(db, outfile)
